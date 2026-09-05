@@ -1,0 +1,26 @@
+# .NET build output
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+
+# VS Code
+.vscode/
+
+# Rider / Visual Studio
+.idea/
+*.DotSettings.user
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment/secrets
+*.env
+appsettings.Development.json
+local.settings.json
+
+# Azure Functions / Container Apps local artifacts
+azurite/

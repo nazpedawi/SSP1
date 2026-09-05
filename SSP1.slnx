@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="api/api.csproj" />
+  <Project Path="fetch-weather-job/fetch-weather-job.csproj" />
+  <Project Path="process-image-job/process-image-job.csproj" />
+  <Project Path="Shared/Shared.csproj" />
+</Solution>
