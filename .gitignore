@@ -24,3 +24,6 @@ local.settings.json
 
 # Azure Functions / Container Apps local artifacts
 azurite/
+
+/*.jpg
+/*.png
