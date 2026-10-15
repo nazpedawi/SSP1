@@ -4,6 +4,10 @@ using FetchWeatherJob;
 using Shared.Models;
 
 var startQueue = new QueueClient("UseDevelopmentStorage=true", "start-jobs");
+var imageQueue = new QueueClient("UseDevelopmentStorage=true", "process-image");
+
+await startQueue.CreateIfNotExistsAsync();
+await imageQueue.CreateIfNotExistsAsync();
 
 var response = await startQueue.ReceiveMessageAsync();
 var message = response.Value;
@@ -56,9 +60,14 @@ var stations = rawStations.Select(s => new WeatherStation(
 )).ToList();
 
 Console.WriteLine($"Fetched {stations.Count} weather stations.");
-foreach (var station in stations)
+
+foreach (var station in stations.Take(50))
 {
-    Console.WriteLine($"{station.StationName}: {station.Temperature}°C, {station.WeatherDescription}");
+    var imageMessage = new ImageJobMessage(jobId, station);
+    var messageJson = JsonSerializer.Serialize(imageMessage);
+
+    await imageQueue.SendMessageAsync(messageJson);
+    Console.WriteLine($"Queued image for {station.StationName}");
 }
 
 await startQueue.DeleteMessageAsync(message.MessageId, message.PopReceipt);
