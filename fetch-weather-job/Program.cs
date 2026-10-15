@@ -1,6 +1,21 @@
 ﻿using System.Text.Json;
+using Azure.Storage.Queues;  
 using FetchWeatherJob;
 using Shared.Models;
+
+var startQueue = new QueueClient("UseDevelopmentStorage=true", "start-jobs");
+
+var response = await startQueue.ReceiveMessageAsync();
+var message = response.Value;
+
+if (message == null)
+{
+    Console.WriteLine("No jobs in the queue. Nothing to do.");
+    return;
+}
+
+var jobId = message.MessageText;
+Console.WriteLine($"Picked up job {jobId}");
 
 using var client = new HttpClient();
 client.DefaultRequestHeaders.UserAgent.ParseAdd("SSP1-WeatherApp/1.0");
@@ -45,3 +60,6 @@ foreach (var station in stations)
 {
     Console.WriteLine($"{station.StationName}: {station.Temperature}°C, {station.WeatherDescription}");
 }
+
+await startQueue.DeleteMessageAsync(message.MessageId, message.PopReceipt);
+Console.WriteLine($"Finished job {jobId}, message deleted.");
