@@ -25,6 +25,16 @@ public static class ImageHelper
                     WrappingLength = image.Width - 10
                 };
 
+                var bounds = TextMeasurer.MeasureBounds(text, options);
+
+                const float padding = 10;
+                var box = new RectangleF(
+                    bounds.X - padding,
+                    bounds.Y - padding,
+                    bounds.Width + padding * 2,
+                    bounds.Height + padding * 2);
+                img.Fill(Color.Black.WithAlpha(0.6f), box);
+
                 img.DrawText(options, text, color);
             }
         });

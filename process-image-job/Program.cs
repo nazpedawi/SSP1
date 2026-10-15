@@ -2,6 +2,8 @@
 using Azure.Storage.Queues;
 using ProcessImageJob;
 using Shared.Models;
+using Azure.Storage.Blobs;
+using Azure.Storage.Blobs.Models;
 
 var imageQueue = new QueueClient("UseDevelopmentStorage=true", "process-image");
 await imageQueue.CreateIfNotExistsAsync();
@@ -53,12 +55,21 @@ var imageBytes = await http.GetByteArrayAsync(imageUrl);
 using var original = new MemoryStream(imageBytes);
 using var edited = ImageHelper.AddTextToImage(original,
     (station.StationName, (20f, 20f), 48, "#FFFFFF"),
-    ($"{station.Temperature}°C - {station.WeatherDescription}", (20f, 90f), 36, "#FFFFFF"));
+    (station.Regio ?? "Onbekende regio", (20f, 100f), 32, "#FFFFFF"),
+    ($"{station.Temperature}°C - {station.WeatherDescription}", (20f, 165f), 36, "#FFFFFF"));
 
-// Save it as a file (temporary, just to check)
-await using var file = File.Create($"{station.StationId}.png");
-await edited.CopyToAsync(file);
-Console.WriteLine($"Saved {station.StationId}.png");
+// Upload the image to Blob storage
+var container = new BlobContainerClient("UseDevelopmentStorage=true", "images");
+await container.CreateIfNotExistsAsync();
+
+var blobName = $"{imageJob.JobId}/{station.StationId}.png";
+var blob = container.GetBlobClient(blobName);
+
+await blob.UploadAsync(edited, new BlobUploadOptions
+{
+    HttpHeaders = new BlobHttpHeaders { ContentType = "image/png" }
+});
+Console.WriteLine($"Uploaded {blobName}");
 
 await imageQueue.DeleteMessageAsync(message.MessageId, message.PopReceipt);
 Console.WriteLine("Message deleted.");
