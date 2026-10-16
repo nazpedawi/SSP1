@@ -21,17 +21,42 @@ POST /jobs
                                                    ▼
                                             [blob container: images]
                                               {jobId}/{stationId}.png
+                                                   │
+                                                   ▼
+                                     GET /jobs/{jobId}/images (SAS links)
 ```
 
 | Project | What it does |
 | --- | --- |
-| `api` | Web API. `POST /jobs` returns a job id immediately (202 Accepted) and puts the job on the `start-jobs` queue. |
+| `api` | Web API. `POST /jobs` returns a job id immediately (202 Accepted) and puts the job on the `start-jobs` queue. `GET /jobs/{jobId}/images` returns temporary SAS links to the finished images of that job. |
 | `fetch-weather-job` | Reads one message from `start-jobs`, fetches weather data from Buienradar and fans out one message per station to `process-image`. |
 | `process-image-job` | Reads one message from `process-image`, gets a photo from Unsplash (searched by the station's region), writes the weather data on it and uploads it to Blob Storage. |
 | `Shared` | Models used by more than one project (`WeatherStation`, `ImageJobMessage`). |
 
 Every message is only deleted from its queue **after** the work has succeeded.
 If a job crashes, the message becomes visible again and can be retried.
+
+## API endpoints
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `POST` | `/jobs` | Starts a new job. Returns `202 Accepted` with the `jobId`. The work happens in the background. |
+| `GET` | `/jobs/{jobId}/images` | Returns a link to every image of the job that is finished so far. |
+
+All requests are documented in `api/api.http`.
+
+### Image links with SAS tokens
+
+The `images` blob container is **private**: the images cannot be opened with a plain URL.
+Instead, `GET /jobs/{jobId}/images` creates a **SAS (Shared Access Signature) link** for every image:
+
+- **Read-only** – the link can only be used to view the image
+- **One blob only** – the link works for that single image, not the whole container
+- **Valid for 1 hour** – after that the link stops working
+
+Only blobs whose name starts with `{jobId}/` are returned, so every job only sees its own images.
+
+The endpoint returns the images that are finished **so far**, so calling it while the job is still running gives a partial list.
 
 ## Setup
 
@@ -51,6 +76,7 @@ What was tested locally:
 - **Queue `start-jobs`** – `POST /jobs` creates a message with the job id; `fetch-weather-job` receives it and deletes it after processing.
 - **Queue `process-image`** – `fetch-weather-job` creates one message per weather station (fan-out); `process-image-job` receives one message, processes it and deletes it.
 - **Blob container `images`** – `process-image-job` uploads the generated image as `{jobId}/{stationId}.png`, viewable in Storage Explorer.
+- **SAS links** – `GET /jobs/{jobId}/images` returns a read-only link per image, valid for 1 hour. The same URL without the SAS token is refused with `AuthorizationFailure`, because the `images` container is private.
 
 Screenshots of these:
 
@@ -58,14 +84,16 @@ Screenshots of these:
 ![Messages in process-image queue](docs/screenshots/process-image-queue.png)
 ![Generated image in Blob storage](docs/screenshots/blob-image.png)
 
-## Note on station count
+## Notes
+
+### Station count
 
 The assignment brief references "50 weather stations," but Buienradar's live feed does not return a fixed number.
 The actual count fluctuates (individual stations can be offline for maintenance, etc.).
 Observed live responses have ranged from around 40 to 43 stations rather than exactly 50.
-The application therefore uses **at most 50** stations) and processes however many the feed returns.
+The application therefore uses **at most 50** stations and processes however many the feed returns.
 
-## Note on ImageSharp version
+### ImageSharp version
 
 `SixLabors.ImageSharp` **3.1.12** and `SixLabors.ImageSharp.Drawing` **2.1.7** are pinned on purpose.
 These are the same versions as the sample in `InHolland-CCD/2026/samples/ImageEditor`.
@@ -83,9 +111,13 @@ Upgrading was tried, but it broke the build, so it was rolled back to the versio
 **Why the risk is low:** the advisories are about processing malicious image files.
 This app only processes photos downloaded from the Unsplash API (a trusted source), never images uploaded by users.
 
-`ImageHelper.cs` is based on the course sample
-([wearetriple/InHolland-CCD/2026/samples/ImageEditor](https://github.com/wearetriple/InHolland-CCD/tree/main/2026/samples/ImageEditor)),
-extended with a semi-transparent dark background behind each line of text for readability.
+## Course material used
+
+- `ImageHelper.cs` is based on the course sample
+  ([wearetriple/InHolland-CCD/2026/samples/ImageEditor](https://github.com/wearetriple/InHolland-CCD/tree/main/2026/samples/ImageEditor)),
+  extended with a semi-transparent dark background behind each line of text for readability.
+- The SAS endpoint is based on `ImagesController` from the course demo
+  (`InHolland-CCD/2026/demos/src/DemoImagesApi`), adapted to return only the images of one job.
 
 ## AI usage
 

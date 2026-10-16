@@ -1,1 +1,9 @@
-   POST http://localhost:5078/jobs
+@baseUrl = http://localhost:5078
+
+### Start a new job
+# @name startJob
+POST {{baseUrl}}/jobs
+
+### Images of that job
+@jobId = {{startJob.response.body.$.jobId}}
+GET {{baseUrl}}/jobs/{{jobId}}/images
