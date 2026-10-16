@@ -26,8 +26,8 @@ GET {{baseUrl}}/jobs/{{jobId}}/images
 
 ### 4. Status of a job that does not exist
 # Returns 404 Not Found.
-GET {{baseUrl}}/jobs/does-not-exist
+GET {{baseUrl}}/jobs/rbdjsdi339383
 
 ### 5. Images of a job that does not exist
 # Returns 404 Not Found.
-GET {{baseUrl}}/jobs/does-not-exist/images
+GET {{baseUrl}}/jobs/djdn3763/images

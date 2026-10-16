@@ -68,7 +68,7 @@ var selectedStations = stations.Take(50).ToList();
 
 await jobsTable.UpsertEntityAsync(new TableEntity(jobId, "job")
 {
-    ["Status"] = "Processing",
+    ["Status"] = JobStatus.Processing.ToString(),
     ["TotalImages"] = selectedStations.Count
 }, TableUpdateMode.Merge);
 Console.WriteLine($"Job {jobId} set to Processing with {selectedStations.Count} images.");

@@ -1,28 +1,31 @@
-using Azure.Data.Tables;          
-using Azure.Storage.Blobs;
+using Azure.Data.Tables;
 using Azure.Storage.Blobs.Models;
-using Azure.Storage.Queues;
 using Azure.Storage.Sas;
+using Shared;
+using Shared.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
-var queue = new QueueClient("UseDevelopmentStorage=true", "start-jobs");
+// Storage clients: Azurite locally, managed identity in Azure
+var queue = Storage.Queue("start-jobs");
 await queue.CreateIfNotExistsAsync();
 
-var images = new BlobContainerClient("UseDevelopmentStorage=true", "images");
+var images = Storage.Container("images");
 await images.CreateIfNotExistsAsync();
 
-var jobsTable = new TableClient("UseDevelopmentStorage=true", "jobs");
+var jobsTable = Storage.Table("jobs");
 await jobsTable.CreateIfNotExistsAsync();
 
+// Start a new job
 app.MapPost("/jobs", async () =>
 {
     var jobId = Guid.NewGuid().ToString();
 
+    // Save the job in the table BEFORE putting it on the queue
     await jobsTable.AddEntityAsync(new TableEntity(jobId, "job")
     {
-        ["Status"] = "Queued",
+        ["Status"] = JobStatus.Queued.ToString(),
         ["CreatedAt"] = DateTimeOffset.UtcNow
     });
 
@@ -41,7 +44,7 @@ app.MapGet("/jobs/{jobId}", async (string jobId) =>
     }
 
     var job = result.Value!;
-    var status = job.GetString("Status");
+    var status = Enum.Parse<JobStatus>(job.GetString("Status")!);
     var totalImages = job.GetInt32("TotalImages") ?? 0;
 
     // Count the "image-..." rows of this job (every row in the partition except the "job" row)
@@ -55,9 +58,9 @@ app.MapGet("/jobs/{jobId}", async (string jobId) =>
     }
 
     // "Completed" is calculated, not stored: done when every image has been recorded
-    if (status == "Processing" && totalImages > 0 && finishedImages >= totalImages)
+    if (status == JobStatus.Processing && totalImages > 0 && finishedImages >= totalImages)
     {
-        status = "Completed";
+        status = JobStatus.Completed;
     }
 
     var progressPercent = totalImages == 0 ? 0 : finishedImages * 100 / totalImages;
@@ -65,7 +68,7 @@ app.MapGet("/jobs/{jobId}", async (string jobId) =>
     return Results.Ok(new
     {
         jobId,
-        status,
+        status = status.ToString(),
         totalImages,
         finishedImages,
         progressPercent,
