@@ -12,9 +12,12 @@ param suffix string
 @description('Tag of the images to deploy')
 param imageTag string = 'latest'
 
+@description('false = only storage + registry (phase 1, before the images exist); true = also environment, API and jobs')
+param deployApps bool = true
+
 @secure()
 @description('Unsplash access key, passed in when deploying (never stored in Git)')
-param unsplashAccessKey string
+param unsplashAccessKey string = ''
 
 var storageAccountName = 'ssp1stg${suffix}'
 var registryName = 'ssp1acr${suffix}'
@@ -42,7 +45,7 @@ module registry 'modules/containerRegistry.bicep' = {
   }
 }
 
-module environment 'modules/containerAppsEnvironment.bicep' = {
+module environment 'modules/containerAppsEnvironment.bicep' = if (deployApps) {
   name: 'environment'
   params: {
     location: location
@@ -52,7 +55,7 @@ module environment 'modules/containerAppsEnvironment.bicep' = {
   }
 }
 
-module api 'modules/api.bicep' = {
+module api 'modules/api.bicep' = if (deployApps) {
   name: 'api'
   params: {
     location: appsLocation
@@ -65,7 +68,7 @@ module api 'modules/api.bicep' = {
   }
 }
 
-module jobs 'modules/jobs.bicep' = {
+module jobs 'modules/jobs.bicep' = if (deployApps) {
   name: 'jobs'
   params: {
     location: appsLocation
@@ -83,4 +86,3 @@ module jobs 'modules/jobs.bicep' = {
 output storageAccountName string = storage.outputs.storageAccountName
 output registryName string = registry.outputs.registryName
 output registryLoginServer string = registry.outputs.loginServer
-output apiUrl string = 'https://${api.outputs.fqdn}'
