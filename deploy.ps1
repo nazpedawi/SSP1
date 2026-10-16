@@ -62,7 +62,9 @@ az account show --query "{subscription:name, user:user.name}" --output table
 Write-Step "Registering Azure resource providers (only slow the first time)"
 foreach ($provider in "Microsoft.Storage", "Microsoft.ContainerRegistry", "Microsoft.ManagedIdentity", "Microsoft.App", "Microsoft.OperationalInsights") {
     az provider register --namespace $provider --wait --output none
-    Assert-Success "register $provider"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Warning: could not register $provider (no subscription-level rights; fine if it is already registered)" -ForegroundColor Yellow
+    }
 }
 
 # ---------------------------------------------------------------------------
@@ -89,7 +91,7 @@ if ($LASTEXITCODE -ne 0) {
     $token = az acr login --name $RegistryName --expose-token --query accessToken --output tsv 2>$null
     Assert-Success "az acr login --expose-token"
 
-    $dockerConfigDir = Join-Path $env:TEMP "ssp1-docker-config"
+    $dockerConfigDir = Join-Path ([System.IO.Path]::GetTempPath()) "ssp1-docker-config"
     New-Item -ItemType Directory -Force $dockerConfigDir | Out-Null
     $auth = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("00000000-0000-0000-0000-000000000000:$token"))
     @{ auths = @{ $LoginServer = @{ auth = $auth } } } | ConvertTo-Json -Depth 5 |

@@ -1,0 +1,39 @@
+name: build-and-deploy
+
+on:
+  push:
+    branches: [ master ]
+    paths-ignore:            # don't redeploy for documentation-only changes
+      - '**.md'
+      - 'docs/**'
+      - 'api/api.http'
+  workflow_dispatch:         # "Run workflow" button on GitHub
+
+permissions:
+  id-token: write            # needed for the password-less Azure login (OIDC)
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Log in to Azure (OIDC, no password stored)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and deploy with deploy.ps1
+        shell: pwsh
+        env:
+          UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
+        run: ./deploy.ps1
