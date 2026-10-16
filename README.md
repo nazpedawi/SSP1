@@ -135,3 +135,18 @@ How I worked with it:
 - I did not give the assignment to the AI and let it build everything at once, I asked to work in small steps instead.
 - Every step was run and tested by me locally before moving on to the next one.
 - I reviewed the code in each step and made my own choices along the way.
+
+
+### Job status in Table storage
+
+All status data is stored in one table, `jobs`, using the **jobId as PartitionKey**:
+
+| RowKey | Columns | Written by |
+| --- | --- | --- |
+| `job` | `Status`, `TotalImages`, `CreatedAt` | API (`Queued`), fetch-weather-job (`Processing` + total) |
+| `image-{stationId}` | `StationName`, `BlobName`, `FinishedAt` | process-image-job, one row per finished image |
+
+Each image gets its own row instead of incrementing a counter on the job row, because many
+image jobs run at the same time and would overwrite each other's count.
+`GET /jobs/{jobId}` counts the image rows to calculate progress, and reports `Completed`
+when the number of finished images reaches `TotalImages`.

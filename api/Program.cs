@@ -31,6 +31,7 @@ app.MapPost("/jobs", async () =>
     return Results.Accepted($"/jobs/{jobId}", new { jobId });
 });
 
+// Return the status and progress of one job
 app.MapGet("/jobs/{jobId}", async (string jobId) =>
 {
     var result = await jobsTable.GetEntityIfExistsAsync<TableEntity>(jobId, "job");
@@ -40,12 +41,34 @@ app.MapGet("/jobs/{jobId}", async (string jobId) =>
     }
 
     var job = result.Value!;
-        
-        return Results.Ok(new
+    var status = job.GetString("Status");
+    var totalImages = job.GetInt32("TotalImages") ?? 0;
+
+    // Count the "image-..." rows of this job (every row in the partition except the "job" row)
+    var jobRowKey = "job";
+    var filter = TableClient.CreateQueryFilter($"PartitionKey eq {jobId} and RowKey ne {jobRowKey}");
+
+    var finishedImages = 0;
+    await foreach (var row in jobsTable.QueryAsync<TableEntity>(filter))
+    {
+        finishedImages++;
+    }
+
+    // "Completed" is calculated, not stored: done when every image has been recorded
+    if (status == "Processing" && totalImages > 0 && finishedImages >= totalImages)
+    {
+        status = "Completed";
+    }
+
+    var progressPercent = totalImages == 0 ? 0 : finishedImages * 100 / totalImages;
+
+    return Results.Ok(new
     {
         jobId,
-        status = job.GetString("Status"),
-        totalImages = job.GetInt32("TotalImages"),
+        status,
+        totalImages,
+        finishedImages,
+        progressPercent,
         createdAt = job.GetDateTimeOffset("CreatedAt")
     });
 });

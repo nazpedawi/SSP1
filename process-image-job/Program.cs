@@ -4,9 +4,13 @@ using ProcessImageJob;
 using Shared.Models;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Azure.Data.Tables;
 
 var imageQueue = new QueueClient("UseDevelopmentStorage=true", "process-image");
 await imageQueue.CreateIfNotExistsAsync();
+
+var jobsTable = new TableClient("UseDevelopmentStorage=true", "jobs");
+await jobsTable.CreateIfNotExistsAsync();
 
 var response = await imageQueue.ReceiveMessageAsync();
 var message = response.Value;
@@ -70,6 +74,15 @@ await blob.UploadAsync(edited, new BlobUploadOptions
     HttpHeaders = new BlobHttpHeaders { ContentType = "image/png" }
 });
 Console.WriteLine($"Uploaded {blobName}");
+
+// Record that this image is finished: one row per image
+await jobsTable.UpsertEntityAsync(new TableEntity(imageJob.JobId, $"image-{station.StationId}")
+{
+    ["StationName"] = station.StationName,
+    ["BlobName"] = blobName,
+    ["FinishedAt"] = DateTimeOffset.UtcNow
+});
+Console.WriteLine($"Recorded image-{station.StationId} in the jobs table");
 
 await imageQueue.DeleteMessageAsync(message.MessageId, message.PopReceipt);
 Console.WriteLine("Message deleted.");
