@@ -40,10 +40,12 @@ app.MapGet("/jobs/{jobId}", async (string jobId) =>
     }
 
     var job = result.Value!;
-    return Results.Ok(new
+        
+        return Results.Ok(new
     {
         jobId,
         status = job.GetString("Status"),
+        totalImages = job.GetInt32("TotalImages"),
         createdAt = job.GetDateTimeOffset("CreatedAt")
     });
 });

@@ -1,13 +1,16 @@
 ﻿using System.Text.Json;
-using Azure.Storage.Queues;  
+using Azure.Data.Tables;         
+using Azure.Storage.Queues;
 using FetchWeatherJob;
 using Shared.Models;
 
 var startQueue = new QueueClient("UseDevelopmentStorage=true", "start-jobs");
 var imageQueue = new QueueClient("UseDevelopmentStorage=true", "process-image");
+var jobsTable = new TableClient("UseDevelopmentStorage=true", "jobs");   
 
 await startQueue.CreateIfNotExistsAsync();
 await imageQueue.CreateIfNotExistsAsync();
+await jobsTable.CreateIfNotExistsAsync();                                  
 
 var response = await startQueue.ReceiveMessageAsync();
 var message = response.Value;
@@ -61,7 +64,16 @@ var stations = rawStations.Select(s => new WeatherStation(
 
 Console.WriteLine($"Fetched {stations.Count} weather stations.");
 
-foreach (var station in stations.Take(50))
+var selectedStations = stations.Take(50).ToList();
+
+await jobsTable.UpsertEntityAsync(new TableEntity(jobId, "job")
+{
+    ["Status"] = "Processing",
+    ["TotalImages"] = selectedStations.Count
+}, TableUpdateMode.Merge);
+Console.WriteLine($"Job {jobId} set to Processing with {selectedStations.Count} images.");
+
+foreach (var station in selectedStations)
 {
     var imageMessage = new ImageJobMessage(jobId, station);
     var messageJson = JsonSerializer.Serialize(imageMessage);
