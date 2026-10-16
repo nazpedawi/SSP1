@@ -42,7 +42,7 @@ Set-Location $PSScriptRoot
 $ResourceGroup = "ssp1-rg-$Suffix"
 $RegistryName  = "ssp1acr$Suffix"
 $LoginServer   = "$RegistryName.azurecr.io"
-$ImageTag      = Get-Date -Format "yyyyMMddHHmmss"   # a new tag every deploy, so Azure always picks up the new images
+$ImageTag      = (Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmss")   # UTC, so local and GitHub tags line up
 
 if ([string]::IsNullOrWhiteSpace($UnsplashAccessKey)) {
     Write-Host "No Unsplash key. Set `$env:UNSPLASH_ACCESS_KEY or pass -UnsplashAccessKey." -ForegroundColor Red
