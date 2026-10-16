@@ -77,12 +77,14 @@ What was tested locally:
 - **Queue `process-image`** – `fetch-weather-job` creates one message per weather station (fan-out); `process-image-job` receives one message, processes it and deletes it.
 - **Blob container `images`** – `process-image-job` uploads the generated image as `{jobId}/{stationId}.png`, viewable in Storage Explorer.
 - **SAS links** – `GET /jobs/{jobId}/images` returns a read-only link per image, valid for 1 hour. The same URL without the SAS token is refused with `AuthorizationFailure`, because the `images` container is private.
+- **Table `jobs`** – the API creates the job row (`Queued`), fetch-weather-job sets `Processing` and `TotalImages`, and process-image-job adds one row per finished image. `GET /jobs/{jobId}` shows the progress (for example 3 of 40, 7%).
 
 Screenshots of these:
 
 ![Messages in start-jobs queue](docs/screenshots/start-jobs-queue.png)
 ![Messages in process-image queue](docs/screenshots/process-image-queue.png)
-![Generated image in Blob storage](docs/screenshots/blob-image.png)
+![Blob storage](docs/screenshots/blob-image.png)
+![Table storage](docs/screenshots/table-image.png)
 
 ## Notes
 
