@@ -1,3 +1,4 @@
+using Azure.Data.Tables;          
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Queues;
@@ -12,13 +13,39 @@ await queue.CreateIfNotExistsAsync();
 var images = new BlobContainerClient("UseDevelopmentStorage=true", "images");
 await images.CreateIfNotExistsAsync();
 
+var jobsTable = new TableClient("UseDevelopmentStorage=true", "jobs");
+await jobsTable.CreateIfNotExistsAsync();
+
 app.MapPost("/jobs", async () =>
 {
     var jobId = Guid.NewGuid().ToString();
 
+    await jobsTable.AddEntityAsync(new TableEntity(jobId, "job")
+    {
+        ["Status"] = "Queued",
+        ["CreatedAt"] = DateTimeOffset.UtcNow
+    });
+
     await queue.SendMessageAsync(jobId);
 
     return Results.Accepted($"/jobs/{jobId}", new { jobId });
+});
+
+app.MapGet("/jobs/{jobId}", async (string jobId) =>
+{
+    var result = await jobsTable.GetEntityIfExistsAsync<TableEntity>(jobId, "job");
+    if (!result.HasValue)
+    {
+        return Results.NotFound(new { error = $"Job {jobId} not found" });
+    }
+
+    var job = result.Value!;
+    return Results.Ok(new
+    {
+        jobId,
+        status = job.GetString("Status"),
+        createdAt = job.GetDateTimeOffset("CreatedAt")
+    });
 });
 
 // Return a temporary link (SAS) for every image of this job

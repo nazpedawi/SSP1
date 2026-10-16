@@ -7,3 +7,9 @@ POST {{baseUrl}}/jobs
 ### Images of that job
 @jobId = {{startJob.response.body.$.jobId}}
 GET {{baseUrl}}/jobs/{{jobId}}/images
+
+### Status of that job
+GET {{baseUrl}}/jobs/{{jobId}}
+
+### Status of invalid job
+GET {{baseUrl}}/jobs/abv636272
