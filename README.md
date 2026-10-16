@@ -1,7 +1,105 @@
-## Note on station count
+# SSP1 – Weather Images
 
-The assignment brief references "50 weather stations," but Buienradar's live feed does not return a fixed number. the actual count fluctuates (individual stations can be offline for maintenance, etc.). Observed live responses have ranged from around 40 to 43 stations rather than exactly 50. So, the application does not hardcode an expected count anywhere.
+An app that generates images with current weather data for Dutch weather stations.
+A single API call starts a background process: weather data is fetched from Buienradar,
+and for each weather station a photo is taken from Unsplash, the weather data is written
+on it, and the result is stored in Azure Blob Storage.
+
+## How it works
+
+```
+POST /jobs
+   │
+   ▼
+[queue: start-jobs] ──► fetch-weather-job
+                            │  fetches Buienradar data
+                            │  sends 1 message per station (max 50)
+                            ▼
+                     [queue: process-image] ──► process-image-job (1 run per station)
+                                                   │  gets a photo from Unsplash
+                                                   │  writes the weather data on it
+                                                   ▼
+                                            [blob container: images]
+                                              {jobId}/{stationId}.png
+```
+
+| Project | What it does |
+| --- | --- |
+| `api` | Web API. `POST /jobs` returns a job id immediately (202 Accepted) and puts the job on the `start-jobs` queue. |
+| `fetch-weather-job` | Reads one message from `start-jobs`, fetches weather data from Buienradar and fans out one message per station to `process-image`. |
+| `process-image-job` | Reads one message from `process-image`, gets a photo from Unsplash (searched by the station's region), writes the weather data on it and uploads it to Blob Storage. |
+| `Shared` | Models used by more than one project (`WeatherStation`, `ImageJobMessage`). |
+
+Every message is only deleted from its queue **after** the work has succeeded.
+If a job crashes, the message becomes visible again and can be retried.
 
 ## Setup
 
 - .NET 10 SDK
+- [Azurite](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azurite) (VS Code extension)
+- An Unsplash developer account
+
+## Local testing
+
+All storage parts of this project were developed and tested locally before deploying to Azure, using:
+
+- **Azurite** (VS Code extension) – local emulator for Azure Storage (Blob, Queue and Table)
+- **Microsoft Azure Storage Explorer** – to inspect queues, messages and blobs
+
+What was tested locally:
+
+- **Queue `start-jobs`** – `POST /jobs` creates a message with the job id; `fetch-weather-job` receives it and deletes it after processing.
+- **Queue `process-image`** – `fetch-weather-job` creates one message per weather station (fan-out); `process-image-job` receives one message, processes it and deletes it.
+- **Blob container `images`** – `process-image-job` uploads the generated image as `{jobId}/{stationId}.png`, viewable in Storage Explorer.
+
+Screenshots of these:
+
+![Messages in start-jobs queue](docs/screenshots/start-jobs-queue.png)
+![Messages in process-image queue](docs/screenshots/process-image-queue.png)
+![Generated image in Blob storage](docs/screenshots/blob-image.png)
+
+## Note on station count
+
+The assignment brief references "50 weather stations," but Buienradar's live feed does not return a fixed number.
+The actual count fluctuates (individual stations can be offline for maintenance, etc.).
+Observed live responses have ranged from around 40 to 43 stations rather than exactly 50.
+The application therefore uses **at most 50** stations) and processes however many the feed returns.
+
+## Note on ImageSharp version
+
+`SixLabors.ImageSharp` **3.1.12** and `SixLabors.ImageSharp.Drawing` **2.1.7** are pinned on purpose.
+These are the same versions as the sample in `InHolland-CCD/2026/samples/ImageEditor`.
+
+When building, NuGet shows a warning that ImageSharp 3.1.12 has known security advisories.
+This was investigated:
+
+- **All 3.x versions** of ImageSharp (including the newer 3.2.0) are flagged with moderate and high severity advisories.
+- Only the **4.x line** (4.1.2 and later) has the fixes, but together with ImageSharp.Drawing 3.x it:
+  - requires a **commercial Six Labors license key** for Release builds (needed for the Docker image), and
+  - has **breaking API changes** (`DrawText` no longer works as used in `ImageHelper.cs`).
+
+Upgrading was tried, but it broke the build, so it was rolled back to the versions above.
+
+**Why the risk is low:** the advisories are about processing malicious image files.
+This app only processes photos downloaded from the Unsplash API (a trusted source), never images uploaded by users.
+
+`ImageHelper.cs` is based on the course sample
+([wearetriple/InHolland-CCD/2026/samples/ImageEditor](https://github.com/wearetriple/InHolland-CCD/tree/main/2026/samples/ImageEditor)),
+extended with a semi-transparent dark background behind each line of text for readability.
+
+## AI usage
+
+**Claude (Opus 5.5)** was used during this assignment, inside a Claude project that contained the assignment brief and the course slides.
+
+How it was used:
+
+- suggesting code, which I added to the project myself.
+- explaining what each piece of code does.
+- splitting the assignment into small steps.
+- understanding errors.
+
+How I worked with it:
+
+- I did not give the assignment to the AI and let it build everything at once, I asked to work in small steps instead.
+- Every step was run and tested by me locally before moving on to the next one.
+- I reviewed the code in each step and made my own choices along the way.
