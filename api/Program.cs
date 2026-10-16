@@ -58,10 +58,15 @@ app.MapGet("/jobs/{jobId}", async (string jobId) =>
         finishedImages++;
     }
 
-    // "Completed" is calculated, not stored: done when every image has been recorded
+    // "Completed" is calculated: done when every image has been recorded.
+    // The first time we see this, save it to the job row so Table storage shows it too.
     if (status == JobStatus.Processing && totalImages > 0 && finishedImages >= totalImages)
     {
         status = JobStatus.Completed;
+
+        await jobsTable.UpsertEntityAsync(
+            new TableEntity(jobId, jobRowKey) { ["Status"] = JobStatus.Completed.ToString() },
+            TableUpdateMode.Merge);
     }
 
     var progressPercent = totalImages == 0 ? 0 : finishedImages * 100 / totalImages;
