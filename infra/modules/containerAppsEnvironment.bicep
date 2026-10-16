@@ -3,6 +3,9 @@
 @description('Azure region for the resources')
 param location string
 
+@description('Region for the Container Apps environment (can differ when a region has no capacity)')
+param environmentLocation string
+
 @description('Name of the Container Apps environment')
 param environmentName string
 
@@ -20,10 +23,12 @@ resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2022-10-01' = {
   }
 }
 
-resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
+resource environment 'Microsoft.App/managedEnvironments@2026-07-01' = {
   name: environmentName
-  location: location
+  location: environmentLocation
   properties: {
+    // Explicitly a workload-profiles environment: "express" environments don't support jobs
+    environmentMode: 'WorkloadProfiles'
     appLogsConfiguration: {
       destination: 'log-analytics'
       logAnalyticsConfiguration: {
@@ -31,6 +36,12 @@ resource environment 'Microsoft.App/managedEnvironments@2024-03-01' = {
         sharedKey: logAnalytics.listKeys().primarySharedKey
       }
     }
+    workloadProfiles: [
+      {
+        name: 'Consumption'
+        workloadProfileType: 'Consumption'
+      }
+    ]
   }
 }
 

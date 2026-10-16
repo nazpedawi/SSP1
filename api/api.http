@@ -4,7 +4,7 @@
 ### Azure:  comment out the local baseUrl and uncomment the Azure one
 
 # @baseUrl = http://localhost:5078
-@baseUrl = https://ssp1-api-np.kindground-b58735cf.germanywestcentral.azurecontainerapps.io
+@baseUrl = https://ssp1-api-np.orangecoast-8d2a12d9.swedencentral.azurecontainerapps.io
 
 ### 1. Start a new job
 # Returns 202 Accepted with the jobId.

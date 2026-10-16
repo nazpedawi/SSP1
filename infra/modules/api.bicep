@@ -38,6 +38,7 @@ resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
   }
   properties: {
     managedEnvironmentId: environmentId
+    workloadProfileName: 'Consumption'
     configuration: {
       ingress: {
         external: true          // reachable from the internet

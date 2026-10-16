@@ -3,11 +3,18 @@
 @description('Azure region (must be allowed by the student subscription policy)')
 param location string = resourceGroup().location
 
-@description('Short unique suffix, e.g. your initials + a number (lowercase letters and numbers only)')
+@description('Region for the Container Apps environment, API and jobs (germanywestcentral has no capacity for new environments)')
+param appsLocation string = 'swedencentral'
+
+@description('Short unique suffix, e.g. your initials (lowercase letters and numbers only)')
 param suffix string
 
 @description('Tag of the images to deploy')
 param imageTag string = 'latest'
+
+@secure()
+@description('Unsplash access key, passed in when deploying (never stored in Git)')
+param unsplashAccessKey string
 
 var storageAccountName = 'ssp1stg${suffix}'
 var registryName = 'ssp1acr${suffix}'
@@ -15,6 +22,8 @@ var pullIdentityName = 'ssp1-pull-id-${suffix}'
 var environmentName = 'ssp1-env-${suffix}'
 var logAnalyticsName = 'ssp1-law-${suffix}'
 var apiAppName = 'ssp1-api-${suffix}'
+var fetchJobName = 'ssp1-fetch-job-${suffix}'
+var processJobName = 'ssp1-process-job-${suffix}'
 
 module storage 'modules/storage.bicep' = {
   name: 'storage'
@@ -37,6 +46,7 @@ module environment 'modules/containerAppsEnvironment.bicep' = {
   name: 'environment'
   params: {
     location: location
+    environmentLocation: appsLocation
     environmentName: environmentName
     logAnalyticsName: logAnalyticsName
   }
@@ -45,13 +55,28 @@ module environment 'modules/containerAppsEnvironment.bicep' = {
 module api 'modules/api.bicep' = {
   name: 'api'
   params: {
-    location: location
+    location: appsLocation
     appName: apiAppName
     environmentId: environment.outputs.environmentId
     registryLoginServer: registry.outputs.loginServer
     pullIdentityId: registry.outputs.pullIdentityId
     imageTag: imageTag
     storageAccountName: storage.outputs.storageAccountName
+  }
+}
+
+module jobs 'modules/jobs.bicep' = {
+  name: 'jobs'
+  params: {
+    location: appsLocation
+    environmentId: environment.outputs.environmentId
+    registryLoginServer: registry.outputs.loginServer
+    pullIdentityId: registry.outputs.pullIdentityId
+    imageTag: imageTag
+    storageAccountName: storage.outputs.storageAccountName
+    fetchJobName: fetchJobName
+    processJobName: processJobName
+    unsplashAccessKey: unsplashAccessKey
   }
 }
 
