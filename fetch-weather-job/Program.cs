@@ -1,12 +1,12 @@
 ﻿using System.Text.Json;
 using Azure.Data.Tables;         
-using Azure.Storage.Queues;
 using FetchWeatherJob;
 using Shared.Models;
+using Shared;
 
-var startQueue = new QueueClient("UseDevelopmentStorage=true", "start-jobs");
-var imageQueue = new QueueClient("UseDevelopmentStorage=true", "process-image");
-var jobsTable = new TableClient("UseDevelopmentStorage=true", "jobs");   
+var startQueue = Storage.Queue("start-jobs");
+var imageQueue = Storage.Queue("process-image");
+var jobsTable = Storage.Table("jobs");
 
 await startQueue.CreateIfNotExistsAsync();
 await imageQueue.CreateIfNotExistsAsync();

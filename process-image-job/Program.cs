@@ -1,15 +1,14 @@
 ﻿using System.Text.Json;
-using Azure.Storage.Queues;
 using ProcessImageJob;
 using Shared.Models;
-using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Data.Tables;
+using Shared;
 
-var imageQueue = new QueueClient("UseDevelopmentStorage=true", "process-image");
+var imageQueue = Storage.Queue("process-image");
 await imageQueue.CreateIfNotExistsAsync();
 
-var jobsTable = new TableClient("UseDevelopmentStorage=true", "jobs");
+var jobsTable = Storage.Table("jobs");
 await jobsTable.CreateIfNotExistsAsync();
 
 var response = await imageQueue.ReceiveMessageAsync();
@@ -63,7 +62,7 @@ using var edited = ImageHelper.AddTextToImage(original,
     ($"{station.Temperature}°C - {station.WeatherDescription}", (20f, 165f), 36, "#FFFFFF"));
 
 // Upload the image to Blob storage
-var container = new BlobContainerClient("UseDevelopmentStorage=true", "images");
+var container = Storage.Container("images");
 await container.CreateIfNotExistsAsync();
 
 var blobName = $"{imageJob.JobId}/{station.StationId}.png";
