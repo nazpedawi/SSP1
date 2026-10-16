@@ -1,15 +1,33 @@
-@baseUrl = http://localhost:5078
+### API – documentation
+### Flow: 1) start a job  2) check its status  3) get the images
+### Local:  run Azurite + `dotnet run --project api`
+### Azure:  comment out the local baseUrl and uncomment the Azure one
 
-### Start a new job
+@baseUrl = http://localhost:5078
+# @baseUrl = https://<your-container-app>.azurecontainerapps.io
+
+### 1. Start a new job
+# Returns 202 Accepted with the jobId.
+# The images are generated in the background (start-jobs queue -> process-image queue).
 # @name startJob
 POST {{baseUrl}}/jobs
 
-### Images of that job
+### The jobId from the response above is used in the requests below
 @jobId = {{startJob.response.body.$.jobId}}
-GET {{baseUrl}}/jobs/{{jobId}}/images
 
-### Status of that job
+### 2. Status and progress of the job
+# Returns status (Queued / Processing / Completed), totalImages, finishedImages and progressPercent.
 GET {{baseUrl}}/jobs/{{jobId}}
 
-### Status of invalid job
-GET {{baseUrl}}/jobs/abv636272
+### 3. Images of the job
+# Returns a SAS link per finished image (read-only, valid for 1 hour).
+# Can be called while the job is still running: returns the images finished so far.
+GET {{baseUrl}}/jobs/{{jobId}}/images
+
+### 4. Status of a job that does not exist
+# Returns 404 Not Found.
+GET {{baseUrl}}/jobs/does-not-exist
+
+### 5. Images of a job that does not exist
+# Returns 404 Not Found.
+GET {{baseUrl}}/jobs/does-not-exist/images

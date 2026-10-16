@@ -76,6 +76,12 @@ app.MapGet("/jobs/{jobId}", async (string jobId) =>
 // Return a temporary link (SAS) for every image of this job
 app.MapGet("/jobs/{jobId}/images", async (string jobId, CancellationToken cancellationToken) =>
 {
+    var job = await jobsTable.GetEntityIfExistsAsync<TableEntity>(jobId, "job");
+    if (!job.HasValue)
+    {
+        return Results.NotFound(new { error = $"Job {jobId} not found" });
+    }
+
     var expiresOn = DateTimeOffset.UtcNow.AddHours(1);
     var urls = new List<string>();
 
