@@ -26,22 +26,22 @@ POST /jobs
                                      GET /jobs/{jobId}/images (SAS links)
 ```
 
-| Project | What it does |
-| --- | --- |
-| `api` | Web API. `POST /jobs` returns a job id immediately (202 Accepted) and puts the job on the `start-jobs` queue. `GET /jobs/{jobId}/images` returns temporary SAS links to the finished images of that job. |
-| `fetch-weather-job` | Reads one message from `start-jobs`, fetches weather data from Buienradar and fans out one message per station to `process-image`. |
-| `process-image-job` | Reads one message from `process-image`, gets a photo from Unsplash (searched by the station's region), writes the weather data on it and uploads it to Blob Storage. |
-| `Shared` | Models used by more than one project (`WeatherStation`, `ImageJobMessage`). |
+| Project             | What it does                                                                                                                                                                                             |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `api`               | Web API. `POST /jobs` returns a job id immediately (202 Accepted) and puts the job on the `start-jobs` queue. `GET /jobs/{jobId}/images` returns temporary SAS links to the finished images of that job. |
+| `fetch-weather-job` | Reads one message from `start-jobs`, fetches weather data from Buienradar and fans out one message per station to `process-image`.                                                                       |
+| `process-image-job` | Reads one message from `process-image`, gets a photo from Unsplash (searched by the station's region), writes the weather data on it and uploads it to Blob Storage.                                     |
+| `Shared`            | Models used by more than one project (`WeatherStation`, `ImageJobMessage`).                                                                                                                              |
 
 Every message is only deleted from its queue **after** the work has succeeded.
 If a job crashes, the message becomes visible again and can be retried.
 
 ## API endpoints
 
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| `POST` | `/jobs` | Starts a new job. Returns `202 Accepted` with the `jobId`. The work happens in the background. |
-| `GET` | `/jobs/{jobId}/images` | Returns a link to every image of the job that is finished so far. |
+| Method | Endpoint               | Description                                                                                    |
+| ------ | ---------------------- | ---------------------------------------------------------------------------------------------- |
+| `POST` | `/jobs`                | Starts a new job. Returns `202 Accepted` with the `jobId`. The work happens in the background. |
+| `GET`  | `/jobs/{jobId}/images` | Returns a link to every image of the job that is finished so far.                              |
 
 All requests are documented in `api/api.http`.
 
@@ -138,15 +138,14 @@ How I worked with it:
 - Every step was run and tested by me locally before moving on to the next one.
 - I reviewed the code in each step and made my own choices along the way.
 
-
 ### Job status in Table storage
 
 All status data is stored in one table, `jobs`, using the **jobId as PartitionKey**:
 
-| RowKey | Columns | Written by |
-| --- | --- | --- |
-| `job` | `Status`, `TotalImages`, `CreatedAt` | API (`Queued`), fetch-weather-job (`Processing` + total) |
-| `image-{stationId}` | `StationName`, `BlobName`, `FinishedAt` | process-image-job, one row per finished image |
+| RowKey              | Columns                                 | Written by                                               |
+| ------------------- | --------------------------------------- | -------------------------------------------------------- |
+| `job`               | `Status`, `TotalImages`, `CreatedAt`    | API (`Queued`), fetch-weather-job (`Processing` + total) |
+| `image-{stationId}` | `StationName`, `BlobName`, `FinishedAt` | process-image-job, one row per finished image            |
 
 Each image gets its own row instead of incrementing a counter on the job row, because many
 image jobs run at the same time and would overwrite each other's count.
@@ -162,3 +161,13 @@ when the number of finished images reaches `TotalImages`.
 
 No account keys or connection strings are stored in code, config or Git (same approach as the course demo `DemoImagesApi`).
 In Azure, SAS links are signed with a **user delegation key** instead of an account key.
+
+### Container images
+
+ACR Tasks (`az acr build`) are not allowed on the Azure for Students subscription
+(`TasksOperationsNotAllowed`). The images are therefore built and pushed with the
+.NET SDK's built-in container support (`dotnet publish /t:PublishContainer`), without Dockerfiles.
+Docker Desktop is only used to store the registry login (`az acr login`).
+
+The image text uses **DejaVu Sans** (free font license), bundled in `process-image-job/Fonts/`,
+because the Linux container images have no fonts installed.
