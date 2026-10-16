@@ -7,6 +7,8 @@ param location string = resourceGroup().location
 param suffix string
 
 var storageAccountName = 'ssp1stg${suffix}'
+var registryName = 'ssp1acr${suffix}'
+var pullIdentityName = 'ssp1-pull-id-${suffix}'
 
 module storage 'modules/storage.bicep' = {
   name: 'storage'
@@ -16,4 +18,15 @@ module storage 'modules/storage.bicep' = {
   }
 }
 
+module registry 'modules/containerRegistry.bicep' = {
+  name: 'registry'
+  params: {
+    location: location
+    registryName: registryName
+    pullIdentityName: pullIdentityName
+  }
+}
+
 output storageAccountName string = storage.outputs.storageAccountName
+output registryName string = registry.outputs.registryName
+output registryLoginServer string = registry.outputs.loginServer
