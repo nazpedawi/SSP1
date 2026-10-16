@@ -11,7 +11,8 @@ var app = builder.Build();
 var queue = Storage.Queue("start-jobs");
 await queue.CreateIfNotExistsAsync();
 
-var images = Storage.Container("images");
+var blobService = Storage.BlobService();
+var images = blobService.GetBlobContainerClient("images");
 await images.CreateIfNotExistsAsync();
 
 var jobsTable = Storage.Table("jobs");
@@ -85,15 +86,45 @@ app.MapGet("/jobs/{jobId}/images", async (string jobId, CancellationToken cancel
         return Results.NotFound(new { error = $"Job {jobId} not found" });
     }
 
+    var startsOn = DateTimeOffset.UtcNow.AddMinutes(-5);   // a bit in the past, in case clocks differ slightly
     var expiresOn = DateTimeOffset.UtcNow.AddHours(1);
+
+    // In Azure there is no account key: ask Azure for a user delegation key ONCE per request
+    UserDelegationKey? delegationKey = null;
+    if (Storage.IsAzure)
+    {
+        var keyResponse = await blobService.GetUserDelegationKeyAsync(startsOn, expiresOn, cancellationToken);
+        delegationKey = keyResponse.Value;
+    }
+
     var urls = new List<string>();
 
     // Only the blobs whose name starts with "{jobId}/" belong to this job
     await foreach (var blob in images.GetBlobsAsync(BlobTraits.None, BlobStates.None, $"{jobId}/", cancellationToken))
     {
         var blobClient = images.GetBlobClient(blob.Name);
-        var sasUrl = blobClient.GenerateSasUri(BlobSasPermissions.Read, expiresOn);
-        urls.Add(sasUrl.ToString());
+
+        if (delegationKey == null)
+        {
+            // Locally (Azurite): sign the link with the account key from the connection string
+            urls.Add(blobClient.GenerateSasUri(BlobSasPermissions.Read, expiresOn).ToString());
+        }
+        else
+        {
+            // In Azure: sign the link with the user delegation key
+            var sas = new BlobSasBuilder
+            {
+                BlobContainerName = images.Name,
+                BlobName = blob.Name,
+                Resource = "b",              // "b" = one blob
+                StartsOn = startsOn,
+                ExpiresOn = expiresOn
+            };
+            sas.SetPermissions(BlobSasPermissions.Read);
+
+            var sasToken = sas.ToSasQueryParameters(delegationKey, blobService.AccountName);
+            urls.Add($"{blobClient.Uri}?{sasToken}");
+        }
     }
 
     return Results.Ok(new { jobId, count = urls.Count, images = urls });
