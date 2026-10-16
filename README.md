@@ -152,3 +152,13 @@ Each image gets its own row instead of incrementing a counter on the job row, be
 image jobs run at the same time and would overwrite each other's count.
 `GET /jobs/{jobId}` counts the image rows to calculate progress, and reports `Completed`
 when the number of finished images reaches `TotalImages`.
+
+### Local vs. Azure storage connection
+
+`Shared/Storage.cs` decides how to connect to storage:
+
+- **Locally** (no `STORAGE_ACCOUNT_NAME` set): Azurite, via `UseDevelopmentStorage=true`
+- **In Azure** (`STORAGE_ACCOUNT_NAME` set by Bicep): the app's **managed identity** via `DefaultAzureCredential`
+
+No account keys or connection strings are stored in code, config or Git (same approach as the course demo `DemoImagesApi`).
+In Azure, SAS links are signed with a **user delegation key** instead of an account key.
