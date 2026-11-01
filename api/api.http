@@ -6,6 +6,9 @@
 # @baseUrl = http://localhost:5078
 @baseUrl = https://ssp1-api-np.orangecoast-8d2a12d9.swedencentral.azurecontainerapps.io
 
+### 0. Check that the API is running
+GET {{baseUrl}}/
+
 ### 1. Start a new job
 # Returns 202 Accepted with the jobId.
 # The images are generated in the background (start-jobs queue -> process-image queue).
