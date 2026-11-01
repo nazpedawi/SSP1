@@ -19,12 +19,17 @@ var jobsTable = Storage.Table("jobs");
 await jobsTable.CreateIfNotExistsAsync();
 
 // Root: shows that the API is running and which endpoints exist
-app.MapGet("/", () => Results.Ok(new
+app.MapGet("/", () => Results.Json(new
 {
     message = "Weather image API is running",
-    endpoints = new[] { "POST /jobs", "GET /jobs/{jobId}", "GET /jobs/{jobId}/images" },
+    endpoints = new[]
+    {
+        "POST /jobs                 -> start a new job (returns jobId)",
+        "GET  /jobs/{jobId}         -> status and progress",
+        "GET  /jobs/{jobId}/images  -> SAS links to the finished images"
+    },
     documentation = "See api/api.http in the GitHub repo"
-}));
+}, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
 
 // Start a new job
 app.MapPost("/jobs", async () =>
