@@ -54,12 +54,27 @@ Console.WriteLine($"Image: {imageUrl}");
 
 var imageBytes = await http.GetByteArrayAsync(imageUrl);
 
+// Build the weather line. Some stations don't send a temperature or description (null),
+// so only add the parts that exist.
+var weatherParts = new List<string>();
+if (station.Temperature is not null)
+{
+    weatherParts.Add($"{station.Temperature}°C");
+}
+if (!string.IsNullOrWhiteSpace(station.WeatherDescription))
+{
+    weatherParts.Add(station.WeatherDescription);
+}
+var weatherLine = weatherParts.Count > 0
+    ? string.Join(" - ", weatherParts)
+    : "Geen weerdata beschikbaar";
+
 // Write the weather on the photo
 using var original = new MemoryStream(imageBytes);
 using var edited = ImageHelper.AddTextToImage(original,
     (station.StationName, (20f, 20f), 48, "#FFFFFF"),
     (station.Regio ?? "Onbekende regio", (20f, 100f), 32, "#FFFFFF"),
-    ($"{station.Temperature}°C - {station.WeatherDescription}", (20f, 165f), 36, "#FFFFFF"));
+    (weatherLine, (20f, 165f), 36, "#FFFFFF"));
 
 // Upload the image to Blob storage
 var container = Storage.Container("images");
