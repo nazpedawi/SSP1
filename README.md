@@ -376,6 +376,13 @@ The actual count changes (stations can be offline for maintenance, etc.).
 Observed live responses have ranged from around 40 to 43 stations rather than exactly 50.
 The application therefore uses **at most 50** stations and processes however many the feed returns.
 
+### Stations without temperature or weather description
+
+Some stations (for example at sea, such as station 6225) do not report a temperature or weather description:
+these fields are `null` in the Buienradar feed. In that case only the available data is written on the image
+(for example just `Zwaar bewolkt`, or just `11.8°C`), or `Geen weerdata beschikbaar` when there is none.
+Without this check the image showed only `°C`, because a `null` value becomes an empty string in C# string interpolation.
+
 ### Unsplash rate limit
 
 An Unsplash demo app allows **50 requests per hour**. Every image needs one request, so one job uses almost
