@@ -50,6 +50,7 @@ when a message lands on their queue (KEDA `azure-queue` scaler), handle one mess
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
+| `GET` | `/` | Shows that the API is running and lists the endpoints. |
 | `POST` | `/jobs` | Starts a new job. Returns `202 Accepted` with the `jobId`. The work happens in the background. |
 | `GET` | `/jobs/{jobId}` | Status and progress of the job (`Queued`, `Processing`, `Completed`). Returns `404` for an unknown job. |
 | `GET` | `/jobs/{jobId}/images` | A SAS link to every image of the job that is finished so far. Returns `404` for an unknown job. |
@@ -278,10 +279,16 @@ What was tested:
 
 Screenshots:
 
-![Messages in start-jobs queue](docs/screenshots/start-jobs-queue.png)
-![Messages in process-image queue](docs/screenshots/process-image-queue.png)
-![Generated image in Blob storage](docs/screenshots/blob-image.png)
-![Job and image rows in Table storage](docs/screenshots/table-image.png)
+**Local (Azurite + Storage Explorer):**
+
+![Messages in the process-image queue (local)](docs/screenshots/process-image-queue-local.png)
+![Generated image in Blob storage (local)](docs/screenshots/blob-local.png)
+![Job and image rows in Table storage (local)](docs/screenshots/table-local.png)
+
+**Azure (Storage browser in the Azure portal):**
+
+![Generated image in the images container (Azure)](docs/screenshots/blob-azure.png)
+![Job and image rows in the jobs table (Azure)](docs/screenshots/table-azure.png)
 
 ## Deploying to Azure
 
