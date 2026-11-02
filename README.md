@@ -118,6 +118,8 @@ with `api/api.http` and checked in the Azure portal.
 
 **Azure:**
 
+![Two job ids in the start-jobs queue (Azure)](docs/screenshots/start-jobs-queue-azure.png)
+![One message per station in the process-image queue (Azure)](docs/screenshots/process-image-queue-azure.png)
 ![Blob storage (Azure)](docs/screenshots/blob-azure.png)
 ![Table storage (Azure)](docs/screenshots/table-azure.png)
 
