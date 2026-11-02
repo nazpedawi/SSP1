@@ -89,6 +89,7 @@ Locally I started the jobs by hand instead. In the Azure portal the trigger is v
   its own row instead of adding a new one, so an image is never counted twice. One table with two kinds of rows keeps a whole job in one partition.
 - **`Completed` is calculated by the API**, not written by the image jobs: up to 10 run in parallel and none knows if it is the last.
   When the `image-…` rows reach `TotalImages`, the status request saves `Completed` once to the job row.
+  So the job row in Table storage only changes to `Completed` after the first status request; the API itself always returns the correct status.
 
 ### Security
 
