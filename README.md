@@ -147,8 +147,11 @@ The Azure ids and the Unsplash key are stored as GitHub secrets.
 - **Station count:** Buienradar returns around 40–43 stations, not exactly 50, so the app uses **at most 50**.
 - **Missing weather data:** some stations (for example at sea, such as 6225) send no temperature or description.
   Only the available data is written, or "Geen weerdata beschikbaar" when there is none.
-- **Unsplash limit:** 50 requests per hour, so a second job in the same hour is refused by Unsplash. Those messages stay on the
-  queue and are retried after the limit resets.
+  **Unsplash limit:** the free Unsplash key allows **50 requests per hour**, and every image needs one, so one job (about 40 images)
+  uses most of it. **Start only one job per hour** to see it finish completely.
+  When two jobs are started close together, they share the same queue and the same 50 requests: in a test with two jobs of 40 images,
+  one reached 17 and the other 31 images (48 in total) before Unsplash refused further requests with `403 Forbidden`.
+  Neither job is lost: the remaining images stay on the queue and are retried until the limit resets, and then both jobs finish.
 - **Regions:** storage, registry and logs are in Germany West Central; the Container Apps are in **Sweden Central**,
   because Germany West Central had no capacity for a new Container Apps environment.
 - **Environment mode:** the Container Apps environment must use workload profiles; the default "Express" mode does not support jobs.
